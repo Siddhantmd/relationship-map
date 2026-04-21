@@ -1,6 +1,6 @@
 {
   "nodes": [
-    { "id": "p0", "type": "person", "name": "Arjun Malhotra", "title": "VP Product", "organization": "Zentrix Labs", "degree": 0 },
+    { "id": "p0", "type": "person", "name": "Arjun Malhotra", "title": "Vice President of Product", "organization": "Zentrix Labs", "degree": 0 },
 
     { "id": "p1", "type": "person", "name": "Nisha Verma", "title": "Senior Product Manager", "degree": 1 },
     { "id": "p2", "type": "person", "name": "Rohit Bansal", "title": "CTO", "organization": "Zentrix Labs", "degree": 1 },
@@ -80,6 +80,7 @@
     { "source": "p8", "target": "p24", "relationship": "works with" },
     { "source": "p20", "target": "p25", "relationship": "founder of" },
     { "source": "p20", "target": "p28", "relationship": "works with" },
+    { "source": "p20", "target": "p26", "relationship": "knows" },
 
     { "source": "p16", "target": "e7", "relationship": "employed at" },
     { "source": "p17", "target": "e8", "relationship": "employed at" },

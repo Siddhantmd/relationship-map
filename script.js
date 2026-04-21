@@ -18,6 +18,144 @@ xhr.send();
 
 // -------------------- INITIALIZE VISUALIZATION --------------------
 function initVisualization() {
+  const NODE_WIDTH = 150;
+  const NODE_MIN_HEIGHT = 44;
+  const NODE_VERTICAL_PADDING = 8;
+  const NODE_TEXT_GAP = 3;
+  const NODE_TEXT_MAX_WIDTH = NODE_WIDTH - 16;
+  // Circumscribed half-diagonal of the largest plausible node box + gap (graph coords).
+  const NODE_COLLISION_RADIUS =
+    Math.hypot(NODE_WIDTH / 2 + 12, NODE_MIN_HEIGHT / 2 + NODE_VERTICAL_PADDING + 26) + 14;
+
+  function applyTruncatedText(textSelection, getFullText, maxWidth) {
+    textSelection.each(function(d) {
+      const textEl = d3.select(this);
+      const fullText = (getFullText(d) || "").toString();
+
+      textEl.text(fullText);
+      textEl.attr("title", fullText);
+
+      let titleEl = textEl.select("title");
+      if (titleEl.empty()) {
+        titleEl = textEl.append("title");
+      }
+      titleEl.text(fullText);
+
+      if (this.getComputedTextLength() <= maxWidth) {
+        return;
+      }
+
+      let lo = 0;
+      let hi = fullText.length;
+      while (lo < hi) {
+        const mid = Math.ceil((lo + hi) / 2);
+        textEl.text(`${fullText.slice(0, mid)}...`);
+        if (this.getComputedTextLength() <= maxWidth) {
+          lo = mid;
+        } else {
+          hi = mid - 1;
+        }
+      }
+
+      textEl.text(`${fullText.slice(0, lo)}...`);
+    });
+  }
+
+  function getNodeSubText(d) {
+    if (d.title) {
+      return d.organization ? `${d.title}, ${d.organization}` : d.title;
+    }
+    return d.otherInfo || "";
+  }
+
+  function setGroupTitle(selection, getTitleText) {
+    selection.each(function(d) {
+      const group = d3.select(this);
+      const fullText = (getTitleText(d) || "").toString();
+      let titleEl = group.select("title");
+      if (titleEl.empty()) {
+        titleEl = group.append("title");
+      }
+      titleEl.text(fullText);
+    });
+  }
+
+  function applyTwoLineClampedText(textSelection, getFullText, maxWidth) {
+    textSelection.each(function(d) {
+      const textEl = d3.select(this);
+      const fullText = (getFullText(d) || "").toString().trim();
+
+      textEl.attr("title", fullText);
+      let titleEl = textEl.select("title");
+      if (titleEl.empty()) {
+        titleEl = textEl.append("title");
+      }
+      titleEl.text(fullText);
+
+      textEl.selectAll("tspan").remove();
+      if (!fullText) return;
+
+      const measureTspan = textEl.append("tspan").attr("x", 0).text("");
+      const measureWidth = (value) => {
+        measureTspan.text(value);
+        return measureTspan.node().getComputedTextLength();
+      };
+
+      const clampWithEllipsis = (value) => {
+        if (measureWidth(value) <= maxWidth) return value;
+        let lo = 0;
+        let hi = value.length;
+        while (lo < hi) {
+          const mid = Math.ceil((lo + hi) / 2);
+          const candidate = `${value.slice(0, mid)}...`;
+          if (measureWidth(candidate) <= maxWidth) {
+            lo = mid;
+          } else {
+            hi = mid - 1;
+          }
+        }
+        return `${value.slice(0, lo)}...`;
+      };
+
+      const words = fullText.split(/\s+/).filter(Boolean);
+      let line1 = "";
+      let index = 0;
+
+      while (index < words.length) {
+        const candidate = line1 ? `${line1} ${words[index]}` : words[index];
+        if (!line1 || measureWidth(candidate) <= maxWidth) {
+          line1 = candidate;
+          index += 1;
+        } else {
+          break;
+        }
+      }
+
+      if (!line1) {
+        line1 = clampWithEllipsis(fullText);
+      }
+
+      let line2 = "";
+      if (index < words.length) {
+        line2 = clampWithEllipsis(words.slice(index).join(" "));
+      }
+
+      measureTspan.remove();
+
+      textEl.append("tspan")
+        .attr("x", 0)
+        .attr("dy", 0)
+        .text(line1);
+
+      if (line2) {
+        textEl.append("tspan")
+          .attr("x", 0)
+          .attr("dy", "1.1em")
+          .text(line2);
+      }
+    });
+  }
+
   // -------------------- ADJACENCY LIST --------------------
   const adj = {};
   data.nodes.forEach(n => adj[n.id] = []);
@@ -29,15 +167,116 @@ function initVisualization() {
   // -------------------- SVG --------------------
   const svg = d3.select("svg");
   const graph = svg.append("g").attr("id", "graph");
+  let isNodeDragging = false;
+  let isPanning = false;
+
+  function updateCanvasCursor() {
+    if (isNodeDragging || isPanning) {
+      svg.style("cursor", "grabbing");
+      return;
+    }
+    svg.style("cursor", "default");
+  }
+
+  function resetInteractionCursorState() {
+    isNodeDragging = false;
+    isPanning = false;
+    updateCanvasCursor();
+  }
+
+  window.addEventListener("mouseup", resetInteractionCursorState);
+  window.addEventListener("pointerup", resetInteractionCursorState);
+  window.addEventListener("blur", resetInteractionCursorState);
+
+  updateCanvasCursor();
+
+  function getClusterKey(node) {
+    return node.organization || node.name || node.id;
+  }
+
+  function buildClusterCenters(nodes, width, height, spreadScale) {
+    const clusterKeys = Array.from(new Set(nodes.map(getClusterKey)));
+    const centers = new Map();
+    const centerX = width / 2;
+    const centerY = height / 2;
+    const ringRadius = 280 * spreadScale;
+
+    clusterKeys.forEach((clusterKey, index) => {
+      const angle = (index / Math.max(1, clusterKeys.length)) * Math.PI * 2;
+      centers.set(clusterKey, {
+        x: centerX + ringRadius * Math.cos(angle),
+        y: centerY + ringRadius * Math.sin(angle)
+      });
+    });
+
+    return centers;
+  }
+
+  function createClusterForce(clusterCenters, k = 0.14) {
+    let nodes = [];
+    function force(alpha) {
+      nodes.forEach(d => {
+        if (d.degree === 0) return;
+        const center = clusterCenters.get(getClusterKey(d));
+        if (!center) return;
+        d.vx += (center.x - d.x) * k * alpha;
+        d.vy += (center.y - d.y) * k * alpha;
+      });
+    }
+    force.initialize = (initNodes) => {
+      nodes = initNodes;
+    };
+    return force;
+  }
 
   // -------------------- SIMULATION --------------------
+  const LAYOUT_SPREAD_SCALE = 2;
+  const viewBox = svg.node().viewBox?.baseVal;
+  const width = viewBox && viewBox.width ? viewBox.width : 1400;
+  const height = viewBox && viewBox.height ? viewBox.height : 900;
+  const clusterCenters = buildClusterCenters(data.nodes, width, height, LAYOUT_SPREAD_SCALE);
+  const degreeZeroNode = data.nodes.find(n => n.degree === 0);
+  if (degreeZeroNode) {
+    degreeZeroNode.fx = width / 2;
+    degreeZeroNode.fy = height / 2;
+  }
+
   const simulation = d3.forceSimulation(data.nodes)
-    .force("link", d3.forceLink(data.links).id(d => d.id).distance(280).strength(0.1))
-    .force("charge", d3.forceManyBody().strength(-900))
-    .force("center", d3.forceCenter(700, 450))
-    .force("collision", d3.forceCollide().radius(110))
+    .force(
+      "link",
+      d3.forceLink(data.links)
+        .id(d => d.id)
+        .distance(d => {
+          const sourceDegree = d.source.degree ?? 2;
+          if (sourceDegree === 0) return 220 * LAYOUT_SPREAD_SCALE;
+          if (sourceDegree === 1) return 120 * LAYOUT_SPREAD_SCALE;
+          return 80 * LAYOUT_SPREAD_SCALE;
+        })
+        .strength(d => (getClusterKey(d.source) === getClusterKey(d.target) ? 1 : 0.2))
+    )
+    .force("charge", d3.forceManyBody().strength(-380))
+    .force(
+      "radial",
+      d3.forceRadial(
+        d => {
+          if (d.degree === 0) return 0;
+          if (d.degree === 1) return 220 * LAYOUT_SPREAD_SCALE;
+          return 380 * LAYOUT_SPREAD_SCALE;
+        },
+        width / 2,
+        height / 2
+      ).strength(0.8)
+    )
+    .force("cluster", createClusterForce(clusterCenters, 0.14))
+    .force("center", d3.forceCenter(width / 2, height / 2).strength(0.03))
+    .force(
+      "collision",
+      d3.forceCollide()
+        .radius(() => NODE_COLLISION_RADIUS)
+        .iterations(5)
+    )
     .velocityDecay(0.8)
-    .alphaDecay(0.02);
+    .alphaDecay(0.03);
   const links = graph.append("g")
     .selectAll("line")
     .data(data.links)
@@ -62,53 +301,79 @@ function initVisualization() {
   const linkLabels = linkLabelGroups.append("text")
     .attr("class", "link-label")
     .text(d => d.relationship);
+  applyTruncatedText(linkLabels, d => d.relationship, 220);
+  setGroupTitle(linkLabelGroups, d => d.relationship);
 
   // -------------------- CONTROLS --------------------
   const zoomSlider = document.getElementById("zoom-slider");
   const resetZoomBtn = document.getElementById("reset-zoom");
   const hideIndirectCheckbox = document.getElementById("hide-indirect");
+  const visibilityTransitionDuration = 600;
+  let hasInitiallyCenteredPrimary = false;
+  let initialCenteringTicks = 0;
+  const MAX_INITIAL_CENTERING_TICKS = 60;
 
   function updateLinkVisibility() {
     const hideIndirect = hideIndirectCheckbox.checked;
     const path = currentHovered ? getPath(currentHovered, "p0") : null;
-    links.style("opacity", d => {
+    const pathSet = path ? new Set(path) : null;
+    const hoveredNeighbors = currentHovered ? new Set(adj[currentHovered] || []) : null;
+
+    function isNodeHighlighted(nodeId) {
+      if (!currentHovered) return true;
+      return pathSet.has(nodeId) || hoveredNeighbors.has(nodeId);
+    }
+
+    function isLinkHighlighted(link) {
+      if (!currentHovered) return true;
+      const sourceId = link.source.id;
+      const targetId = link.target.id;
+      const inPath = pathSet.has(sourceId) && pathSet.has(targetId);
+      const touchesHovered = sourceId === currentHovered || targetId === currentHovered;
+      return inPath || touchesHovered;
+    }
+
+    links
+    .interrupt()
+    .transition()
+    .duration(visibilityTransitionDuration)
+    .style("opacity", d => {
       const isDirect = d.source.id === "p0" || d.target.id === "p0";
       if (hideIndirect && !isDirect) return 0;
       if (currentHovered) {
-        const inPath = path.includes(d.source.id) && path.includes(d.target.id);
-        return inPath ? 1 : 0.2;
+        return isLinkHighlighted(d) ? 1 : 0.2;
       }
       return 1;
     })
     .style("stroke-width", d => {
       if (currentHovered) {
-        const inPath = path.includes(d.source.id) && path.includes(d.target.id);
-        return inPath ? 3 : 1;
+        return isLinkHighlighted(d) ? 3 : 1;
       }
       return 1;    })
     .style("filter", d => {
       const isDirect = d.source.id === "p0" || d.target.id === "p0";
       if (hideIndirect && !isDirect) return "none";
       if (currentHovered) {
-        const inPath = path.includes(d.source.id) && path.includes(d.target.id);
-        return inPath ? "none" : "blur(1px)";
+        return isLinkHighlighted(d) ? "none" : "blur(1px)";
       }
       return "none";    })
     .style("filter", d => {
       const isDirect = d.source.id === "p0" || d.target.id === "p0";
       if (hideIndirect && !isDirect) return "none"; // since opacity 0, no need blur
       if (currentHovered) {
-        const inPath = path.includes(d.source.id) && path.includes(d.target.id);
-        return inPath ? "none" : "blur(1px)";
+        return isLinkHighlighted(d) ? "none" : "blur(1px)";
       }
       return "none";
     });
-    linkLabelGroups.style("opacity", d => {
+    linkLabelGroups
+    .interrupt()
+    .transition()
+    .duration(visibilityTransitionDuration)
+    .style("opacity", d => {
       const isDirect = d.source.id === "p0" || d.target.id === "p0";
       if (hideIndirect && !isDirect) return 0;
       if (currentHovered) {
-        const inPath = path.includes(d.source.id) && path.includes(d.target.id);
-        return inPath ? 1 : 0.2;
+        return isLinkHighlighted(d) ? 1 : 0.2;
       }
       return 1;
     })
@@ -116,19 +381,24 @@ function initVisualization() {
       const isDirect = d.source.id === "p0" || d.target.id === "p0";
       if (hideIndirect && !isDirect) return "none";
       if (currentHovered) {
-        const inPath = path.includes(d.source.id) && path.includes(d.target.id);
-        return inPath ? "none" : "blur(4px)";
+        return isLinkHighlighted(d) ? "none" : "blur(4px)";
       }
       return "none";
     });
-    nodes.style("opacity", d => {
+    nodes
+    .interrupt()
+    .transition()
+    .duration(visibilityTransitionDuration)
+    .style("opacity", d => {
       const isDirect = d.id === "p0" || adj["p0"].includes(d.id);
       if (hideIndirect && !isDirect) return 0;
       if (currentHovered) {
-        return path.includes(d.id) ? 1 : 0.2;
+        return isNodeHighlighted(d.id) ? 1 : 0.2;
       }
       return 1;
-    })
+    });
+
+    nodes
     .style("pointer-events", d => {
       const isDirect = d.id === "p0" || adj["p0"].includes(d.id);
       if (hideIndirect && !isDirect) return "none";
@@ -138,7 +408,7 @@ function initVisualization() {
       const isDirect = d.id === "p0" || adj["p0"].includes(d.id);
       if (hideIndirect && !isDirect) return "none";
       if (currentHovered) {
-        return path.includes(d.id) ? "none" : "blur(4px)";
+        return isNodeHighlighted(d.id) ? "none" : "blur(4px)";
       }
       return "none";
     });
@@ -150,7 +420,7 @@ function initVisualization() {
   });
 
   resetZoomBtn.addEventListener("click", () => {
-    svg.transition().call(zoom.transform, d3.zoomIdentity);
+    centerPrimaryNode(1, true);
   });
 
   hideIndirectCheckbox.addEventListener("change", updateLinkVisibility);
@@ -195,20 +465,26 @@ function initVisualization() {
       .on("end", dragEnded)
     )
     .on("mouseover", function(event, d) {
-      currentHovered = d.id;
+      if (d.id === "p0") {
+        currentHovered = null;
+      } else {
+        currentHovered = d.id;
+      }
       updateLinkVisibility();
     })
     .on("mouseout", function() {
       currentHovered = null;
       updateLinkVisibility();
     });
+  setGroupTitle(nodes, d => `${d.name}\n${getNodeSubText(d)}`.trim());
 
   // Rectangles
-  nodes.append("rect")
-    .attr("width", 150)
-    .attr("height", 40)
-    .attr("x", -75)
-    .attr("y", -20)
+  const nodeRects = nodes.append("rect")
+    .attr("class", "node-box")
+    .attr("width", NODE_WIDTH)
+    .attr("height", NODE_MIN_HEIGHT)
+    .attr("x", -NODE_WIDTH / 2)
+    .attr("y", -NODE_MIN_HEIGHT / 2)
     .attr("rx", 6)
     .attr("fill", d => {
       if (d.degree === 0) return "#ffffcc";
@@ -217,33 +493,97 @@ function initVisualization() {
     });
 
   // Text line 1 (bold name)
-  nodes.append("text")
+  const nameText = nodes.append("text")
+    .attr("class", "node-name")
     .attr("text-anchor", "middle")
-    .attr("y", -5)
+    .attr("y", 0)
     .style("font-weight", "bold")
-    .style("font-size", "11px")
-    .text(d => d.name);
+    .style("font-size", "11px");
+  applyTruncatedText(nameText, d => d.name, NODE_TEXT_MAX_WIDTH);
 
   // Text line 2
-  nodes.append("text")
+  const subText = nodes.append("text")
+    .attr("class", "node-subtext")
     .attr("text-anchor", "middle")
-    .attr("y", 12)
-    .style("font-size", "10px")
-    .text(d => {
-      if (d.title) {
-        return d.organization ? `${d.title}, ${d.organization}` : d.title;
+    .attr("y", 0)
+    .style("font-size", "10px");
+  applyTwoLineClampedText(subText, getNodeSubText, NODE_TEXT_MAX_WIDTH);
+
+  function layoutNodeContent() {
+    nodes.each(function() {
+      const nodeGroup = d3.select(this);
+      const box = nodeGroup.select("rect.node-box");
+      const name = nodeGroup.select("text.node-name");
+      const details = nodeGroup.select("text.node-subtext");
+
+      const nameBox = name.node().getBBox();
+      const detailsBox = details.node().getBBox();
+      const hasDetails = details.text().trim().length > 0;
+
+      const contentHeight = hasDetails
+        ? nameBox.height + NODE_TEXT_GAP + detailsBox.height
+        : nameBox.height;
+      const topContentY = -contentHeight / 2;
+
+      name.attr("y", topContentY - nameBox.y);
+
+      if (hasDetails) {
+        details.attr("y", topContentY + nameBox.height + NODE_TEXT_GAP - detailsBox.y);
       }
-      return d.otherInfo || "";
+
+      const nodeHeight = Math.max(NODE_MIN_HEIGHT, contentHeight + (2 * NODE_VERTICAL_PADDING));
+      box
+        .attr("height", nodeHeight)
+        .attr("y", -nodeHeight / 2);
     });
+  }
+
+  layoutNodeContent();
 
   // -------------------- ZOOM --------------------
   const zoom = d3.zoom()
     .scaleExtent([0.1, 3])
+    .on("start", (event) => {
+      if (!event.sourceEvent) return;
+      if (event.sourceEvent.type === "mousedown") {
+        isPanning = true;
+        updateCanvasCursor();
+      }
+    })
     .on("zoom", (event) => {
       graph.attr("transform", event.transform);
+    })
+    .on("end", (event) => {
+      if (event.sourceEvent?.type === "mousedown") {
+        isPanning = false;
+      }
+      updateCanvasCursor();
     });
 
   svg.call(zoom);
+
+  function centerPrimaryNode(scale = null, animate = false) {
+    const primaryNode = data.nodes.find(n => n.id === "p0");
+    if (!primaryNode || !Number.isFinite(primaryNode.x) || !Number.isFinite(primaryNode.y)) {
+      return;
+    }
+
+    const currentTransform = d3.zoomTransform(svg.node());
+    const targetScale = scale ?? currentTransform.k;
+    const viewBox = svg.node().viewBox?.baseVal;
+    const viewportWidth = viewBox && viewBox.width ? viewBox.width : svg.node().clientWidth;
+    const viewportHeight = viewBox && viewBox.height ? viewBox.height : svg.node().clientHeight;
+    const targetTransform = d3.zoomIdentity
+      .translate(viewportWidth / 2, viewportHeight / 2)
+      .scale(targetScale)
+      .translate(-primaryNode.x, -primaryNode.y);
+
+    if (animate) {
+      svg.transition().call(zoom.transform, targetTransform);
+    } else {
+      svg.call(zoom.transform, targetTransform);
+    }
+  }
 
   // -------------------- TICK --------------------
   simulation.on("tick", () => {
@@ -267,6 +607,22 @@ function initVisualization() {
 
     nodes
       .attr("transform", d => `translate(${d.x}, ${d.y})`);
+
+    const primaryNode = data.nodes.find(n => n.id === "p0");
+    if (
+      !hasInitiallyCenteredPrimary &&
+      primaryNode &&
+      Number.isFinite(primaryNode.x) &&
+      Number.isFinite(primaryNode.y)
+    ) {
+      // Keep the primary node centered while the initial simulation settles,
+      // then stop recentering to preserve normal pan/zoom interactions.
+      centerPrimaryNode(1, false);
+      initialCenteringTicks += 1;
+      if (initialCenteringTicks >= MAX_INITIAL_CENTERING_TICKS || simulation.alpha() < 0.12) {
+        hasInitiallyCenteredPrimary = true;
+      }
+    }
   });
 
   // Start the simulation
@@ -277,6 +633,8 @@ function initVisualization() {
     if (!event.active) simulation.alphaTarget(0.3).restart();
     d.fx = d.x;
     d.fy = d.y;
+    isNodeDragging = true;
+    updateCanvasCursor();
   }
 
   function dragged(event, d) {
@@ -288,5 +646,7 @@ function initVisualization() {
     if (!event.active) simulation.alphaTarget(0);
     d.fx = null;
     d.fy = null;
+    isNodeDragging = false;
+    updateCanvasCursor();
   }
 }
