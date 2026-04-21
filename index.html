@@ -3,7 +3,13 @@
 <head>
   <meta charset="utf-8">
   <title>Relationship Map - 50 Nodes</title>
+  <!-- Prefer local `node_modules` after `npm install`; CDN only if missing (e.g. GitHub Pages) -->
   <script src="node_modules/d3/dist/d3.min.js"></script>
+  <script>
+    if (typeof d3 === 'undefined') {
+      document.write('<script src="https://cdn.jsdelivr.net/npm/d3@7.9.0/dist/d3.min.js" crossorigin="anonymous"><\/script>');
+    }
+  </script>
   <link rel="stylesheet" href="style.css">
 </head>
 <body>
