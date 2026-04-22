@@ -1,0 +1,85 @@
+{
+  "nodes": [
+    { "id": "p0", "type": "person", "name": "Soren Vale", "title": "Showrunner", "organization": "Lumen Fiction Studios" },
+
+    { "id": "p1", "type": "person", "name": "Nadia El-Amin", "title": "Head Writer" },
+    { "id": "p2", "type": "person", "name": "Leo Faber", "title": "Director" },
+    { "id": "p3", "type": "person", "name": "Iris Bloom", "title": "Casting Director" },
+    { "id": "p4", "type": "person", "name": "Marco Ruiz", "title": "Line Producer" },
+    { "id": "p5", "type": "person", "name": "Tessa Ng", "title": "Composer" },
+    { "id": "p6", "type": "person", "name": "Viktor Lind", "title": "VFX Supervisor" },
+    { "id": "p7", "type": "person", "name": "Zara Haddad", "title": "Editor" },
+    { "id": "p8", "type": "person", "name": "Rowan Pike", "title": "Script supervisor" },
+
+    { "id": "e1", "type": "entity", "name": "Lumen Fiction Studios", "otherInfo": "Streaming drama unit" },
+    { "id": "e2", "type": "entity", "name": "Season 4 Writers' Room", "otherInfo": "Active production" },
+    { "id": "e3", "type": "entity", "name": "Harborlight Soundstage", "otherInfo": "Principal location" },
+    { "id": "e4", "type": "entity", "name": "Northwind VFX House", "otherInfo": "Vendor" },
+    { "id": "e5", "type": "entity", "name": "Crownlight Festival", "otherInfo": "Premiere partner" },
+    { "id": "e6", "type": "entity", "name": "Guild of Dramatic Arts", "otherInfo": "Industry body" }
+  ],
+
+  "links": [
+    { "source": "p0", "target": "p1", "relationship": "manages", "degree": 1 },
+    { "source": "p0", "target": "p2", "relationship": "collaborates with", "degree": 1 },
+    { "source": "p0", "target": "p3", "relationship": "works with", "degree": 1 },
+    { "source": "p0", "target": "p4", "relationship": "works with", "degree": 1 },
+    { "source": "p0", "target": "p5", "relationship": "works with", "degree": 1 },
+    { "source": "p0", "target": "p6", "relationship": "works with", "degree": 1 },
+    { "source": "p0", "target": "p7", "relationship": "works with", "degree": 1 },
+    { "source": "p0", "target": "p8", "relationship": "works with", "degree": 1 },
+    { "source": "p0", "target": "e1", "relationship": "employed at", "degree": 1 },
+    { "source": "p0", "target": "e2", "relationship": "runs", "degree": 1 },
+
+    { "source": "p1", "target": "p2", "relationship": "writes for", "degree": 2 },
+    { "source": "p1", "target": "p3", "relationship": "coordinates with", "degree": 2 },
+    { "source": "p1", "target": "p4", "relationship": "coordinates with", "degree": 2 },
+    { "source": "p1", "target": "p5", "relationship": "briefs", "degree": 2 },
+    { "source": "p1", "target": "p7", "relationship": "works with", "degree": 2 },
+    { "source": "p1", "target": "p8", "relationship": "works with", "degree": 2 },
+    { "source": "p1", "target": "e2", "relationship": "member of", "degree": 2 },
+
+    { "source": "p2", "target": "p3", "relationship": "casts with", "degree": 2 },
+    { "source": "p2", "target": "p8", "relationship": "blocks scenes with", "degree": 2 },
+    { "source": "p2", "target": "p4", "relationship": "plans with", "degree": 2 },
+    { "source": "p2", "target": "p6", "relationship": "reviews shots with", "degree": 2 },
+    { "source": "p2", "target": "e3", "relationship": "shoots at", "degree": 2 },
+
+    { "source": "p3", "target": "p4", "relationship": "schedules with", "degree": 2 },
+    { "source": "p3", "target": "p7", "relationship": "works with", "degree": 2 },
+    { "source": "p3", "target": "p8", "relationship": "coordinates with", "degree": 2 },
+
+    { "source": "p4", "target": "p5", "relationship": "budgets sessions with", "degree": 2 },
+    { "source": "p4", "target": "p8", "relationship": "schedules with", "degree": 2 },
+    { "source": "p4", "target": "p6", "relationship": "contracts with", "degree": 2 },
+    { "source": "p4", "target": "e3", "relationship": "books", "degree": 2 },
+
+    { "source": "p5", "target": "p7", "relationship": "scores for", "degree": 2 },
+    { "source": "p5", "target": "p2", "relationship": "scores for", "degree": 2 },
+
+    { "source": "p6", "target": "p7", "relationship": "delivers to", "degree": 2 },
+    { "source": "p6", "target": "e4", "relationship": "employed at", "degree": 2 },
+    { "source": "p6", "target": "e1", "relationship": "contracts with", "degree": 2 },
+
+    { "source": "p7", "target": "e2", "relationship": "attends", "degree": 2 },
+    { "source": "p7", "target": "p8", "relationship": "cuts dailies with", "degree": 2 },
+
+    { "source": "p8", "target": "p5", "relationship": "notes timing for", "degree": 2 },
+    { "source": "p8", "target": "p6", "relationship": "tracks plates for", "degree": 2 },
+    { "source": "p8", "target": "e2", "relationship": "member of", "degree": 2 },
+    { "source": "p8", "target": "e3", "relationship": "on set at", "degree": 2 },
+
+    { "source": "e1", "target": "e2", "relationship": "hosts", "degree": 2 },
+    { "source": "e1", "target": "e3", "relationship": "leases", "degree": 2 },
+    { "source": "e1", "target": "e4", "relationship": "partners with", "degree": 2 },
+    { "source": "e1", "target": "e5", "relationship": "sponsors", "degree": 2 },
+    { "source": "e1", "target": "e6", "relationship": "member of", "degree": 2 },
+
+    { "source": "p0", "target": "e5", "relationship": "keynotes", "degree": 1 },
+    { "source": "p0", "target": "e6", "relationship": "sits on board of", "degree": 1 },
+    { "source": "p3", "target": "e5", "relationship": "panels at", "degree": 2 },
+    { "source": "p5", "target": "e5", "relationship": "performs at", "degree": 2 },
+    { "source": "p2", "target": "e6", "relationship": "teaches workshop for", "degree": 2 },
+    { "source": "p4", "target": "e6", "relationship": "certified by", "degree": 2 }
+  ]
+}

@@ -1,36 +1,89 @@
-// -------------------- LOAD DATA --------------------
-let data;
-
-const xhr = new XMLHttpRequest();
-xhr.open('GET', 'data.json', true);
-xhr.onreadystatechange = function() {
-  if (xhr.readyState === 4) {
-    if (xhr.status === 200) {
-      data = JSON.parse(xhr.responseText);
-      console.log('Data loaded successfully:', data.nodes.length, 'nodes,', data.links.length, 'links');
-      initVisualization();
-    } else {
-      console.error('Error loading data:', xhr.status);
-    }
-  }
+// -------------------- DATA SOURCE + LAYOUT DEFAULTS --------------------
+const DATA_SOURCE_FILES = {
+  "1": "data.json",
+  "2": "data2.json",
+  "3": "data3.json",
+  "4": "data4.json",
+  "5": "data5.json"
 };
-xhr.send();
 
-// -------------------- INITIALIZE VISUALIZATION --------------------
-function initVisualization() {
+let activeSimulation = null;
+let mountAbortController = null;
+let dataLoadGeneration = 0;
+let visualizationMountCount = 0;
+let preservedZoomTransform = d3.zoomIdentity;
+
+function snapshotLayoutDefaultsFromInputs() {
+  const panel = document.getElementById("layout-panel");
+  const defaults = {};
+  if (!panel) return defaults;
+  panel.querySelectorAll("input[data-layout-key]").forEach(input => {
+    const key = input.dataset.layoutKey;
+    defaults[key] =
+      key === "collisionIterations" ? parseInt(input.defaultValue, 10) : parseFloat(input.defaultValue);
+  });
+  return defaults;
+}
+
+const LAYOUT_DEFAULTS = snapshotLayoutDefaultsFromInputs();
+
+function loadDataSource(key) {
+  const file = DATA_SOURCE_FILES[key];
+  if (!file) return;
+  const generation = ++dataLoadGeneration;
+  fetch(file)
+    .then(response => {
+      if (!response.ok) throw new Error(`HTTP ${response.status}`);
+      return response.json();
+    })
+    .then(json => {
+      if (generation !== dataLoadGeneration) return;
+      console.log("Data loaded:", file, json.nodes.length, "nodes,", json.links.length, "links");
+      mountVisualization(json);
+    })
+    .catch(err => console.error("Error loading data:", err));
+}
+
+// -------------------- MOUNT / REMOUNT VISUALIZATION --------------------
+function mountVisualization(data) {
+  visualizationMountCount += 1;
+  const isRemount = visualizationMountCount > 1;
+
+  if (mountAbortController) mountAbortController.abort();
+  mountAbortController = new AbortController();
+  const signal = mountAbortController.signal;
+
+  if (activeSimulation) {
+    activeSimulation.stop();
+    activeSimulation = null;
+  }
+  d3.select("svg g#graph").remove();
+  d3.select("svg").on(".zoom", null);
   const NODE_WIDTH = 150;
   const NODE_MIN_HEIGHT = 44;
   const NODE_VERTICAL_PADDING = 8;
+  const PRIMARY_NODE_EXTRA_VERTICAL_PAD = 10;
+  const PRIMARY_NODE_TEXT_H_INSET = 12;
+  const PRIMARY_NODE_MIN_HEIGHT = NODE_MIN_HEIGHT + 14;
   const NODE_TEXT_GAP = 3;
   const NODE_TEXT_MAX_WIDTH = NODE_WIDTH - 16;
+  const NODE_TEXT_MAX_WIDTH_PRIMARY = NODE_WIDTH - 2 * PRIMARY_NODE_TEXT_H_INSET;
   // Circumscribed half-diagonal of the largest plausible node box + gap (graph coords).
   const NODE_COLLISION_RADIUS =
-    Math.hypot(NODE_WIDTH / 2 + 12, NODE_MIN_HEIGHT / 2 + NODE_VERTICAL_PADDING + 26) + 14;
+    Math.hypot(
+      NODE_WIDTH / 2 + 12,
+      PRIMARY_NODE_MIN_HEIGHT / 2 + NODE_VERTICAL_PADDING + PRIMARY_NODE_EXTRA_VERTICAL_PAD + 26
+    ) + 14;
 
-  function applyTruncatedText(textSelection, getFullText, maxWidth) {
+  function resolveMaxWidth(maxWidthOrFn, d) {
+    return typeof maxWidthOrFn === "function" ? maxWidthOrFn(d) : maxWidthOrFn;
+  }
+
+  function applyTruncatedText(textSelection, getFullText, maxWidthOrFn) {
     textSelection.each(function(d) {
       const textEl = d3.select(this);
       const fullText = (getFullText(d) || "").toString();
+      const maxWidth = resolveMaxWidth(maxWidthOrFn, d);
 
       textEl.text(fullText);
       textEl.attr("title", fullText);
@@ -80,10 +133,11 @@ function initVisualization() {
     });
   }
 
-  function applyTwoLineClampedText(textSelection, getFullText, maxWidth) {
+  function applyTwoLineClampedText(textSelection, getFullText, maxWidthOrFn) {
     textSelection.each(function(d) {
       const textEl = d3.select(this);
       const fullText = (getFullText(d) || "").toString().trim();
+      const maxWidth = resolveMaxWidth(maxWidthOrFn, d);
 
       textEl.attr("title", fullText);
       let titleEl = textEl.select("title");
@@ -211,9 +265,9 @@ function initVisualization() {
     updateCanvasCursor();
   }
 
-  window.addEventListener("mouseup", resetInteractionCursorState);
-  window.addEventListener("pointerup", resetInteractionCursorState);
-  window.addEventListener("blur", resetInteractionCursorState);
+  window.addEventListener("mouseup", resetInteractionCursorState, { signal });
+  window.addEventListener("pointerup", resetInteractionCursorState, { signal });
+  window.addEventListener("blur", resetInteractionCursorState, { signal });
 
   updateCanvasCursor();
 
@@ -277,7 +331,6 @@ function initVisualization() {
   }
 
   readLayoutConfigFromPanel();
-  const layoutDefaults = { ...layoutConfig };
 
   const simulation = d3.forceSimulation(data.nodes)
     .force(
@@ -339,8 +392,8 @@ function initVisualization() {
   }
 
   function resetLayoutParam(key) {
-    if (!Object.prototype.hasOwnProperty.call(layoutDefaults, key)) return;
-    const v = layoutDefaults[key];
+    if (!Object.prototype.hasOwnProperty.call(LAYOUT_DEFAULTS, key)) return;
+    const v = LAYOUT_DEFAULTS[key];
     layoutConfig[key] = v;
     const panel = document.getElementById("layout-panel");
     if (!panel) return;
@@ -378,26 +431,34 @@ function initVisualization() {
     readLayoutConfigFromPanel();
     updateLayoutValueLabels();
     panel.querySelectorAll("input[data-layout-key]").forEach(input => {
-      input.addEventListener("input", () => {
-        const key = input.dataset.layoutKey;
-        if (key === "collisionIterations") {
-          layoutConfig[key] = parseInt(input.value, 10);
-        } else {
-          layoutConfig[key] = parseFloat(input.value);
-        }
-        const span = document.getElementById(`${input.id}-val`);
-        if (span) span.textContent = formatLayoutValue(key, layoutConfig[key]);
-        applyLayoutParams();
-      });
+      input.addEventListener(
+        "input",
+        () => {
+          const key = input.dataset.layoutKey;
+          if (key === "collisionIterations") {
+            layoutConfig[key] = parseInt(input.value, 10);
+          } else {
+            layoutConfig[key] = parseFloat(input.value);
+          }
+          const span = document.getElementById(`${input.id}-val`);
+          if (span) span.textContent = formatLayoutValue(key, layoutConfig[key]);
+          applyLayoutParams();
+        },
+        { signal }
+      );
     });
     panel.querySelectorAll("button.layout-param-reset").forEach(btn => {
-      btn.addEventListener("click", () => {
-        const key = btn.dataset.layoutKey;
-        if (key) resetLayoutParam(key);
-      });
+      btn.addEventListener(
+        "click",
+        () => {
+          const key = btn.dataset.layoutKey;
+          if (key) resetLayoutParam(key);
+        },
+        { signal }
+      );
     });
     const redrawBtn = document.getElementById("layout-redraw");
-    if (redrawBtn) redrawBtn.addEventListener("click", redrawLayoutFromPanel);
+    if (redrawBtn) redrawBtn.addEventListener("click", redrawLayoutFromPanel, { signal });
   }
 
   bindLayoutPanel();
@@ -433,7 +494,7 @@ function initVisualization() {
   const resetZoomBtn = document.getElementById("reset-zoom");
   const hideIndirectCheckbox = document.getElementById("hide-indirect");
   const visibilityTransitionDuration = 600;
-  let hasInitiallyCenteredPrimary = false;
+  let hasInitiallyCenteredPrimary = isRemount;
   let initialCenteringTicks = 0;
   const MAX_INITIAL_CENTERING_TICKS = 60;
 
@@ -455,6 +516,13 @@ function initVisualization() {
       const inPath = pathSet.has(sourceId) && pathSet.has(targetId);
       const touchesHovered = sourceId === currentHovered || targetId === currentHovered;
       return inPath || touchesHovered;
+    }
+
+    function isNodeInFocus(d) {
+      if (!currentHovered) return false;
+      const isDirect = d.id === "p0" || adj["p0"].includes(d.id);
+      if (hideIndirect && !isDirect) return false;
+      return isNodeHighlighted(d.id);
     }
 
     links
@@ -536,18 +604,22 @@ function initVisualization() {
       }
       return "none";
     });
+
+    nodes.classed("node--focus", d => isNodeInFocus(d));
   }
 
-  zoomSlider.addEventListener("input", () => {
-    const scale = +zoomSlider.value;
-    svg.transition().call(zoom.scaleTo, scale);
-  });
+  zoomSlider.addEventListener(
+    "input",
+    () => {
+      const scale = +zoomSlider.value;
+      svg.transition().call(zoom.scaleTo, scale);
+    },
+    { signal }
+  );
 
-  resetZoomBtn.addEventListener("click", () => {
-    centerPrimaryNode(1, true);
-  });
+  resetZoomBtn.addEventListener("click", () => centerPrimaryNode(1, true), { signal });
 
-  hideIndirectCheckbox.addEventListener("change", updateLinkVisibility);
+  hideIndirectCheckbox.addEventListener("change", updateLinkVisibility, { signal });
 
   // -------------------- PATH FINDING --------------------
   function getPath(start, end) {
@@ -583,6 +655,7 @@ function initVisualization() {
     .data(data.nodes)
     .enter()
     .append("g")
+    .attr("class", d => (d.id === PRIMARY_NODE_ID ? "node node--primary" : "node"))
     .call(d3.drag()
       .on("start", dragStarted)
       .on("drag", dragged)
@@ -623,7 +696,11 @@ function initVisualization() {
     .attr("y", 0)
     .style("font-weight", "bold")
     .style("font-size", "11px");
-  applyTruncatedText(nameText, d => d.name, NODE_TEXT_MAX_WIDTH);
+  applyTruncatedText(
+    nameText,
+    d => d.name,
+    d => (d.id === PRIMARY_NODE_ID ? NODE_TEXT_MAX_WIDTH_PRIMARY : NODE_TEXT_MAX_WIDTH)
+  );
 
   // Text line 2
   const subText = nodes.append("text")
@@ -631,10 +708,14 @@ function initVisualization() {
     .attr("text-anchor", "middle")
     .attr("y", 0)
     .style("font-size", "10px");
-  applyTwoLineClampedText(subText, getNodeSubText, NODE_TEXT_MAX_WIDTH);
+  applyTwoLineClampedText(
+    subText,
+    getNodeSubText,
+    d => (d.id === PRIMARY_NODE_ID ? NODE_TEXT_MAX_WIDTH_PRIMARY : NODE_TEXT_MAX_WIDTH)
+  );
 
   function layoutNodeContent() {
-    nodes.each(function() {
+    nodes.each(function(d) {
       const nodeGroup = d3.select(this);
       const box = nodeGroup.select("rect.node-box");
       const name = nodeGroup.select("text.node-name");
@@ -655,7 +736,10 @@ function initVisualization() {
         details.attr("y", topContentY + nameBox.height + NODE_TEXT_GAP - detailsBox.y);
       }
 
-      const nodeHeight = Math.max(NODE_MIN_HEIGHT, contentHeight + (2 * NODE_VERTICAL_PADDING));
+      const vPad =
+        d.id === PRIMARY_NODE_ID ? NODE_VERTICAL_PADDING + PRIMARY_NODE_EXTRA_VERTICAL_PAD : NODE_VERTICAL_PADDING;
+      const minBoxH = d.id === PRIMARY_NODE_ID ? PRIMARY_NODE_MIN_HEIGHT : NODE_MIN_HEIGHT;
+      const nodeHeight = Math.max(minBoxH, contentHeight + 2 * vPad);
       box
         .attr("height", nodeHeight)
         .attr("y", -nodeHeight / 2);
@@ -675,6 +759,7 @@ function initVisualization() {
       }
     })
     .on("zoom", (event) => {
+      preservedZoomTransform = event.transform;
       graph.attr("transform", event.transform);
     })
     .on("end", (event) => {
@@ -685,6 +770,9 @@ function initVisualization() {
     });
 
   svg.call(zoom);
+  if (isRemount) {
+    svg.call(zoom.transform, preservedZoomTransform);
+  }
 
   function centerPrimaryNode(scale = null, animate = false) {
     const primaryNode = data.nodes.find(n => n.id === "p0");
@@ -773,4 +861,12 @@ function initVisualization() {
     isNodeDragging = false;
     updateCanvasCursor();
   }
+
+  activeSimulation = simulation;
 }
+
+const dataSourceSelect = document.getElementById("data-source");
+if (dataSourceSelect) {
+  dataSourceSelect.addEventListener("change", () => loadDataSource(dataSourceSelect.value));
+}
+loadDataSource(dataSourceSelect ? dataSourceSelect.value : "1");

@@ -14,7 +14,32 @@
 </head>
 <body>
 
-<svg width="100%" height="100%" viewBox="0 0 1400 900"></svg>
+<svg width="100%" height="100%" viewBox="0 0 1400 900">
+  <defs>
+    <filter
+      id="node-focus-shadow"
+      x="-0.75"
+      y="-0.75"
+      width="2.5"
+      height="2.5"
+      filterUnits="objectBoundingBox"
+      color-interpolation-filters="sRGB"
+    >
+      <feDropShadow dx="0" dy="1" stdDeviation="2.25" flood-color="#000000" flood-opacity="0.22" />
+    </filter>
+    <filter
+      id="primary-node-shadow"
+      x="-0.85"
+      y="-0.85"
+      width="2.7"
+      height="2.7"
+      filterUnits="objectBoundingBox"
+      color-interpolation-filters="sRGB"
+    >
+      <feDropShadow dx="0" dy="2" stdDeviation="3" flood-color="#000000" flood-opacity="0.28" />
+    </filter>
+  </defs>
+</svg>
 
 <div class="controls">
   <div class="zoom-controls">
@@ -25,10 +50,23 @@
   <label><input type="checkbox" id="hide-indirect"> Hide indirect connections</label>
 </div>
 
-<div id="layout-panel" class="layout-panel" aria-label="Layout tuning">
+<div id="layout-panel" class="layout-panel" aria-label="Control panel">
   <div class="layout-panel-header">
-    <div class="layout-panel-title">Layout</div>
+    <div class="layout-panel-title">Control panel</div>
     <button type="button" id="layout-redraw" class="layout-redraw-btn" title="Re-read sliders, apply forces, and run a fresh layout (no page reload)">Redraw</button>
+  </div>
+  <div class="layout-row">
+    <label for="data-source">Data source</label>
+    <span class="layout-val" aria-hidden="true"></span>
+    <div class="layout-slider-row">
+      <select id="data-source" title="JSON dataset for the graph">
+        <option value="1" selected>1</option>
+        <option value="2">2</option>
+        <option value="3">3</option>
+        <option value="4">4</option>
+        <option value="5">5</option>
+      </select>
+    </div>
   </div>
   <div class="layout-row">
     <label for="layout-link-base" title="Target link length for the farthest hop from the primary node; shorter hops use proportionally shorter targets. Higher spreads nodes apart; lower tightens the graph.">Link length base</label>

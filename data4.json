@@ -1,0 +1,58 @@
+{
+  "nodes": [
+    { "id": "p0", "type": "person", "name": "Mira Ashford", "title": "Director of Strategy", "organization": "Northline Analytics" },
+
+    { "id": "p1", "type": "person", "name": "Theo Park", "title": "Senior Analyst" },
+    { "id": "p2", "type": "person", "name": "Ines Duarte", "title": "Operations Lead" },
+    { "id": "p3", "type": "person", "name": "Owen Blake", "title": "Legal Counsel" },
+    { "id": "p4", "type": "person", "name": "Juno Patel", "title": "Finance Manager" },
+    { "id": "p5", "type": "person", "name": "Cleo Ren", "title": "Contractor", "organization": "Bluecrest Advisory" },
+
+    { "id": "p6", "type": "person", "name": "Felix Hart", "otherInfo": "Industry contact" },
+    { "id": "p7", "type": "person", "name": "Ada Morrison", "title": "Research Fellow" },
+
+    { "id": "e1", "type": "entity", "name": "Northline Analytics", "otherInfo": "Boutique consultancy" },
+    { "id": "e2", "type": "entity", "name": "Strategy Office", "otherInfo": "Internal unit" },
+    { "id": "e3", "type": "entity", "name": "Bluecrest Advisory", "otherInfo": "External firm" },
+
+    { "id": "p8", "type": "person", "name": "Sam Okonkwo", "title": "Intern" },
+    { "id": "p9", "type": "person", "name": "Rina Volkov", "title": "Data Engineer" },
+    { "id": "p10", "type": "person", "name": "Marcus Webb", "title": "Client Success" },
+    { "id": "p11", "type": "person", "name": "Helena Costa", "otherInfo": "Speaker, annual forum" },
+
+    { "id": "e4", "type": "entity", "name": "Civic Data Forum", "otherInfo": "Nonprofit event" },
+    { "id": "e5", "type": "entity", "name": "Harbor City Library", "otherInfo": "Community partner" },
+
+    { "id": "p12", "type": "person", "name": "Yuki Taneda", "title": "Librarian" },
+    { "id": "p13", "type": "person", "name": "Diego Salas", "title": "Volunteer coordinator" },
+
+    { "id": "p14", "type": "person", "name": "Quinn Brooks", "title": "Archivist", "organization": "Harbor City Library" }
+  ],
+
+  "links": [
+    { "source": "p0", "target": "p1", "relationship": "manages", "degree": 1 },
+    { "source": "p0", "target": "p2", "relationship": "works with", "degree": 1 },
+    { "source": "p0", "target": "e1", "relationship": "employed at", "degree": 1 },
+    { "source": "p0", "target": "e2", "relationship": "leads", "degree": 1 },
+
+    { "source": "p1", "target": "p3", "relationship": "asks advice from", "degree": 2 },
+    { "source": "p2", "target": "p4", "relationship": "coordinates with", "degree": 2 },
+    { "source": "p0", "target": "p5", "relationship": "hired", "degree": 1 },
+    { "source": "p5", "target": "e3", "relationship": "employed at", "degree": 2 },
+
+    { "source": "p0", "target": "p6", "relationship": "met at conference", "degree": 1 },
+    { "source": "p1", "target": "p7", "relationship": "collaborates with", "degree": 2 },
+
+    { "source": "p2", "target": "p8", "relationship": "mentors", "degree": 2 },
+    { "source": "p0", "target": "p9", "relationship": "works with", "degree": 1 },
+    { "source": "p4", "target": "p10", "relationship": "knows", "degree": 2 },
+
+    { "source": "p0", "target": "p11", "relationship": "introduced by", "degree": 1 },
+    { "source": "p11", "target": "e4", "relationship": "speaks at", "degree": 2 },
+
+    { "source": "p6", "target": "e5", "relationship": "donated books to", "degree": 2 },
+    { "source": "e5", "target": "p12", "relationship": "employs", "degree": 3 },
+    { "source": "e5", "target": "p13", "relationship": "coordinates events with", "degree": 3 },
+    { "source": "p12", "target": "p14", "relationship": "works with", "degree": 3 }
+  ]
+}
