@@ -156,6 +156,25 @@ function initVisualization() {
     });
   }
 
+  const PRIMARY_NODE_ID = "p0";
+
+  function buildHopFromPrimary(adjacency, primaryId) {
+    const hop = new Map();
+    const queue = [primaryId];
+    hop.set(primaryId, 0);
+    while (queue.length) {
+      const u = queue.shift();
+      const dist = hop.get(u);
+      for (const v of adjacency[u] || []) {
+        if (!hop.has(v)) {
+          hop.set(v, dist + 1);
+          queue.push(v);
+        }
+      }
+    }
+    return hop;
+  }
+
   // -------------------- ADJACENCY LIST --------------------
   const adj = {};
   data.nodes.forEach(n => adj[n.id] = []);
@@ -163,6 +182,14 @@ function initVisualization() {
     adj[l.source].push(l.target);
     adj[l.target].push(l.source);
   });
+
+  const hopFromPrimaryMap = buildHopFromPrimary(adj, PRIMARY_NODE_ID);
+
+  function linkTargetHops(link) {
+    if (typeof link.degree === "number") return link.degree;
+    const tid = typeof link.target === "object" && link.target !== null ? link.target.id : link.target;
+    return hopFromPrimaryMap.get(tid) ?? 0;
+  }
 
   // -------------------- SVG --------------------
   const svg = d3.select("svg");
@@ -190,56 +217,67 @@ function initVisualization() {
 
   updateCanvasCursor();
 
-  function getClusterKey(node) {
-    return node.organization || node.name || node.id;
-  }
-
-  function buildClusterCenters(nodes, width, height, spreadScale) {
-    const clusterKeys = Array.from(new Set(nodes.map(getClusterKey)));
-    const centers = new Map();
-    const centerX = width / 2;
-    const centerY = height / 2;
-    const ringRadius = 280 * spreadScale;
-
-    clusterKeys.forEach((clusterKey, index) => {
-      const angle = (index / Math.max(1, clusterKeys.length)) * Math.PI * 2;
-      centers.set(clusterKey, {
-        x: centerX + ringRadius * Math.cos(angle),
-        y: centerY + ringRadius * Math.sin(angle)
-      });
-    });
-
-    return centers;
-  }
-
-  function createClusterForce(clusterCenters, k = 0.14) {
-    let nodes = [];
-    function force(alpha) {
-      nodes.forEach(d => {
-        if (d.degree === 0) return;
-        const center = clusterCenters.get(getClusterKey(d));
-        if (!center) return;
-        d.vx += (center.x - d.x) * k * alpha;
-        d.vy += (center.y - d.y) * k * alpha;
-      });
-    }
-    force.initialize = (initNodes) => {
-      nodes = initNodes;
-    };
-    return force;
-  }
-
   // -------------------- SIMULATION --------------------
-  const LAYOUT_SPREAD_SCALE = 2;
   const viewBox = svg.node().viewBox?.baseVal;
   const width = viewBox && viewBox.width ? viewBox.width : 1400;
   const height = viewBox && viewBox.height ? viewBox.height : 900;
-  const clusterCenters = buildClusterCenters(data.nodes, width, height, LAYOUT_SPREAD_SCALE);
-  const degreeZeroNode = data.nodes.find(n => n.degree === 0);
-  if (degreeZeroNode) {
-    degreeZeroNode.fx = width / 2;
-    degreeZeroNode.fy = height / 2;
+  const primaryNode = data.nodes.find(n => n.id === PRIMARY_NODE_ID);
+  if (primaryNode) {
+    primaryNode.fx = width / 2;
+    primaryNode.fy = height / 2;
   }
+
+  /** Tunable layout parameters (defaults match #layout-panel slider values). */
+  const layoutConfig = {
+    linkLengthBasePx: 400,
+    linkStrength: 1,
+    chargeStrength: -400,
+    radialStrength: 5,
+    radialRingSpacing: 400,
+    centerStrength: 0.002,
+    collisionRadiusFactor: 0.72,
+    collisionIterations: 1,
+    velocityDecay: 0.8,
+    alphaDecay: 0.03
+  };
+
+  function readLayoutConfigFromPanel() {
+    const panel = document.getElementById("layout-panel");
+    if (!panel) return;
+    panel.querySelectorAll("input[data-layout-key]").forEach(input => {
+      const key = input.dataset.layoutKey;
+      if (key === "collisionIterations") {
+        layoutConfig[key] = parseInt(input.value, 10);
+      } else {
+        layoutConfig[key] = parseFloat(input.value);
+      }
+    });
+  }
+
+  function formatLayoutValue(key, v) {
+    if (key === "collisionIterations") return String(v);
+    if (key === "chargeStrength" || key === "linkLengthBasePx" || key === "radialRingSpacing") {
+      return String(Math.round(v));
+    }
+    if (key === "radialStrength") {
+      return Number.isInteger(v) ? String(v) : v.toFixed(2).replace(/\.?0+$/, "");
+    }
+    const s = v.toFixed(4);
+    return s.replace(/\.?0+$/, "");
+  }
+
+  function updateLayoutValueLabels() {
+    const panel = document.getElementById("layout-panel");
+    if (!panel) return;
+    panel.querySelectorAll("input[data-layout-key]").forEach(input => {
+      const key = input.dataset.layoutKey;
+      const span = document.getElementById(`${input.id}-val`);
+      if (span) span.textContent = formatLayoutValue(key, layoutConfig[key]);
+    });
+  }
+
+  readLayoutConfigFromPanel();
+  const layoutDefaults = { ...layoutConfig };
 
   const simulation = d3.forceSimulation(data.nodes)
     .force(
@@ -247,36 +285,122 @@ function initVisualization() {
       d3.forceLink(data.links)
         .id(d => d.id)
         .distance(d => {
-          const sourceDegree = d.source.degree ?? 2;
-          if (sourceDegree === 0) return 220 * LAYOUT_SPREAD_SCALE;
-          if (sourceDegree === 1) return 120 * LAYOUT_SPREAD_SCALE;
-          return 80 * LAYOUT_SPREAD_SCALE;
+          const deg = Math.max(1, linkTargetHops(d));
+          return layoutConfig.linkLengthBasePx / Math.pow(2, deg - 1);
         })
-        .strength(d => (getClusterKey(d.source) === getClusterKey(d.target) ? 1 : 0.2))
+        .strength(layoutConfig.linkStrength)
     )
-    .force("charge", d3.forceManyBody().strength(-380))
+    .force("charge", d3.forceManyBody().strength(layoutConfig.chargeStrength))
     .force(
       "radial",
       d3.forceRadial(
         d => {
-          if (d.degree === 0) return 0;
-          if (d.degree === 1) return 220 * LAYOUT_SPREAD_SCALE;
-          return 380 * LAYOUT_SPREAD_SCALE;
+          if (d.id === PRIMARY_NODE_ID) return 0;
+          const hop = hopFromPrimaryMap.get(d.id) ?? 1;
+          return layoutConfig.radialRingSpacing * hop;
         },
         width / 2,
         height / 2
-      ).strength(0.8)
+      ).strength(layoutConfig.radialStrength)
     )
-    .force("cluster", createClusterForce(clusterCenters, 0.14))
-    .force("center", d3.forceCenter(width / 2, height / 2).strength(0.03))
+    .force("center", d3.forceCenter(width / 2, height / 2).strength(layoutConfig.centerStrength))
     .force(
       "collision",
       d3.forceCollide()
-        .radius(() => NODE_COLLISION_RADIUS)
-        .iterations(5)
+        .radius(() => NODE_COLLISION_RADIUS * layoutConfig.collisionRadiusFactor)
+        .iterations(Math.max(1, Math.round(layoutConfig.collisionIterations)))
     )
-    .velocityDecay(0.8)
-    .alphaDecay(0.03);
+    .velocityDecay(layoutConfig.velocityDecay)
+    .alphaDecay(layoutConfig.alphaDecay);
+
+  function applyLayoutParams() {
+    const linkF = simulation.force("link");
+    if (linkF) {
+      linkF.strength(layoutConfig.linkStrength);
+      linkF.distance(d => {
+        const deg = Math.max(1, linkTargetHops(d));
+        return layoutConfig.linkLengthBasePx / Math.pow(2, deg - 1);
+      });
+    }
+    const chargeF = simulation.force("charge");
+    if (chargeF) chargeF.strength(layoutConfig.chargeStrength);
+    const radialF = simulation.force("radial");
+    if (radialF) radialF.strength(layoutConfig.radialStrength);
+    const centerF = simulation.force("center");
+    if (centerF) centerF.strength(layoutConfig.centerStrength);
+    const collideF = simulation.force("collision");
+    if (collideF) {
+      collideF.radius(() => NODE_COLLISION_RADIUS * layoutConfig.collisionRadiusFactor);
+      collideF.iterations(Math.max(1, Math.round(layoutConfig.collisionIterations)));
+    }
+    simulation.velocityDecay(layoutConfig.velocityDecay);
+    simulation.alphaDecay(layoutConfig.alphaDecay);
+    simulation.alpha(Math.max(simulation.alpha(), 0.28)).restart();
+  }
+
+  function resetLayoutParam(key) {
+    if (!Object.prototype.hasOwnProperty.call(layoutDefaults, key)) return;
+    const v = layoutDefaults[key];
+    layoutConfig[key] = v;
+    const panel = document.getElementById("layout-panel");
+    if (!panel) return;
+    const input = panel.querySelector(`input[data-layout-key="${key}"]`);
+    if (input) input.value = String(v);
+    updateLayoutValueLabels();
+    applyLayoutParams();
+  }
+
+  function redrawLayoutFromPanel() {
+    readLayoutConfigFromPanel();
+    updateLayoutValueLabels();
+    applyLayoutParams();
+    const spreadX = width * 0.35;
+    const spreadY = height * 0.35;
+    for (const n of data.nodes) {
+      if (n.id === PRIMARY_NODE_ID) {
+        n.vx = 0;
+        n.vy = 0;
+        continue;
+      }
+      n.fx = null;
+      n.fy = null;
+      n.x = width / 2 + (Math.random() - 0.5) * 2 * spreadX;
+      n.y = height / 2 + (Math.random() - 0.5) * 2 * spreadY;
+      n.vx = 0;
+      n.vy = 0;
+    }
+    simulation.alpha(1).restart();
+  }
+
+  function bindLayoutPanel() {
+    const panel = document.getElementById("layout-panel");
+    if (!panel) return;
+    readLayoutConfigFromPanel();
+    updateLayoutValueLabels();
+    panel.querySelectorAll("input[data-layout-key]").forEach(input => {
+      input.addEventListener("input", () => {
+        const key = input.dataset.layoutKey;
+        if (key === "collisionIterations") {
+          layoutConfig[key] = parseInt(input.value, 10);
+        } else {
+          layoutConfig[key] = parseFloat(input.value);
+        }
+        const span = document.getElementById(`${input.id}-val`);
+        if (span) span.textContent = formatLayoutValue(key, layoutConfig[key]);
+        applyLayoutParams();
+      });
+    });
+    panel.querySelectorAll("button.layout-param-reset").forEach(btn => {
+      btn.addEventListener("click", () => {
+        const key = btn.dataset.layoutKey;
+        if (key) resetLayoutParam(key);
+      });
+    });
+    const redrawBtn = document.getElementById("layout-redraw");
+    if (redrawBtn) redrawBtn.addEventListener("click", redrawLayoutFromPanel);
+  }
+
+  bindLayoutPanel();
   const links = graph.append("g")
     .selectAll("line")
     .data(data.links)
@@ -487,7 +611,7 @@ function initVisualization() {
     .attr("y", -NODE_MIN_HEIGHT / 2)
     .attr("rx", 6)
     .attr("fill", d => {
-      if (d.degree === 0) return "#ffffcc";
+      if (d.id === PRIMARY_NODE_ID) return "#ffffcc";
       if (d.type === "person") return "#ffccff";
       return "#ccffff";
     });

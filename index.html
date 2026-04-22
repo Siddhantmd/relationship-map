@@ -25,6 +25,93 @@
   <label><input type="checkbox" id="hide-indirect"> Hide indirect connections</label>
 </div>
 
+<div id="layout-panel" class="layout-panel" aria-label="Layout tuning">
+  <div class="layout-panel-header">
+    <div class="layout-panel-title">Layout</div>
+    <button type="button" id="layout-redraw" class="layout-redraw-btn" title="Re-read sliders, apply forces, and run a fresh layout (no page reload)">Redraw</button>
+  </div>
+  <div class="layout-row">
+    <label for="layout-link-base">Link length base</label>
+    <span class="layout-val" id="layout-link-base-val"></span>
+    <div class="layout-slider-row">
+      <input type="range" id="layout-link-base" data-layout-key="linkLengthBasePx" min="50" max="1200" step="10" value="400">
+      <button type="button" class="layout-param-reset" data-layout-key="linkLengthBasePx" title="Reset link length base to default" aria-label="Reset link length base">↺</button>
+    </div>
+  </div>
+  <div class="layout-row">
+    <label for="layout-link-strength">Link strength</label>
+    <span class="layout-val" id="layout-link-strength-val"></span>
+    <div class="layout-slider-row">
+      <input type="range" id="layout-link-strength" data-layout-key="linkStrength" min="0" max="2" step="0.05" value="1">
+      <button type="button" class="layout-param-reset" data-layout-key="linkStrength" title="Reset link strength to default" aria-label="Reset link strength">↺</button>
+    </div>
+  </div>
+  <div class="layout-row">
+    <label for="layout-charge">Charge (repulsion)</label>
+    <span class="layout-val" id="layout-charge-val"></span>
+    <div class="layout-slider-row">
+      <input type="range" id="layout-charge" data-layout-key="chargeStrength" min="-1500" max="0" step="5" value="-400">
+      <button type="button" class="layout-param-reset" data-layout-key="chargeStrength" title="Reset charge to default" aria-label="Reset charge">↺</button>
+    </div>
+  </div>
+  <div class="layout-row">
+    <label for="layout-radial-strength">Radial strength</label>
+    <span class="layout-val" id="layout-radial-strength-val"></span>
+    <div class="layout-slider-row">
+      <input type="range" id="layout-radial-strength" data-layout-key="radialStrength" min="0" max="10" step="0.05" value="5">
+      <button type="button" class="layout-param-reset" data-layout-key="radialStrength" title="Reset radial strength to default" aria-label="Reset radial strength">↺</button>
+    </div>
+  </div>
+  <div class="layout-row">
+    <label for="layout-radial-spacing">Radial ring spacing</label>
+    <span class="layout-val" id="layout-radial-spacing-val"></span>
+    <div class="layout-slider-row">
+      <input type="range" id="layout-radial-spacing" data-layout-key="radialRingSpacing" min="50" max="1000" step="10" value="400">
+      <button type="button" class="layout-param-reset" data-layout-key="radialRingSpacing" title="Reset radial ring spacing to default" aria-label="Reset radial ring spacing">↺</button>
+    </div>
+  </div>
+  <div class="layout-row">
+    <label for="layout-center">Center strength</label>
+    <span class="layout-val" id="layout-center-val"></span>
+    <div class="layout-slider-row">
+      <input type="range" id="layout-center" data-layout-key="centerStrength" min="0" max="0.2" step="0.001" value="0.002">
+      <button type="button" class="layout-param-reset" data-layout-key="centerStrength" title="Reset center strength to default" aria-label="Reset center strength">↺</button>
+    </div>
+  </div>
+  <div class="layout-row">
+    <label for="layout-collision-radius">Collision radius factor</label>
+    <span class="layout-val" id="layout-collision-radius-val"></span>
+    <div class="layout-slider-row">
+      <input type="range" id="layout-collision-radius" data-layout-key="collisionRadiusFactor" min="0.2" max="2" step="0.02" value="0.72">
+      <button type="button" class="layout-param-reset" data-layout-key="collisionRadiusFactor" title="Reset collision radius factor to default" aria-label="Reset collision radius factor">↺</button>
+    </div>
+  </div>
+  <div class="layout-row">
+    <label for="layout-collision-iter">Collision iterations</label>
+    <span class="layout-val" id="layout-collision-iter-val"></span>
+    <div class="layout-slider-row">
+      <input type="range" id="layout-collision-iter" data-layout-key="collisionIterations" min="1" max="20" step="1" value="1">
+      <button type="button" class="layout-param-reset" data-layout-key="collisionIterations" title="Reset collision iterations to default" aria-label="Reset collision iterations">↺</button>
+    </div>
+  </div>
+  <div class="layout-row">
+    <label for="layout-velocity-decay">Velocity decay</label>
+    <span class="layout-val" id="layout-velocity-decay-val"></span>
+    <div class="layout-slider-row">
+      <input type="range" id="layout-velocity-decay" data-layout-key="velocityDecay" min="0.05" max="0.99" step="0.01" value="0.8">
+      <button type="button" class="layout-param-reset" data-layout-key="velocityDecay" title="Reset velocity decay to default" aria-label="Reset velocity decay">↺</button>
+    </div>
+  </div>
+  <div class="layout-row">
+    <label for="layout-alpha-decay">Alpha decay</label>
+    <span class="layout-val" id="layout-alpha-decay-val"></span>
+    <div class="layout-slider-row">
+      <input type="range" id="layout-alpha-decay" data-layout-key="alphaDecay" min="0.0005" max="0.15" step="0.0005" value="0.03">
+      <button type="button" class="layout-param-reset" data-layout-key="alphaDecay" title="Reset alpha decay to default" aria-label="Reset alpha decay">↺</button>
+    </div>
+  </div>
+</div>
+
 <script src="script.js"></script>
 </body>
 </html>
