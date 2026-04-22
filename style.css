@@ -39,12 +39,28 @@ svg {
 .node .node-inner {
   transform-box: fill-box;
   transform-origin: center center;
-  transition: transform 600ms linear;
+  transition: transform 300ms linear;
   transform: scale(1);
 }
 
+/* Tooltip target: only the label text (not the whole card). Wrapper has no padding. */
+.node .node-label-hit {
+  padding: 0;
+  margin: 0;
+}
+
+.node .node-label-hit text {
+  pointer-events: painted;
+}
+
 .node.node--focus .node-inner {
+  transform: scale(1.04);
+}
+
+/* Primary: keep focus scale always; no transform transition on hover in/out. */
+.node.node--primary .node-inner {
   transform: scale(1.05);
+  transition: none;
 }
 
 .node .node-box {

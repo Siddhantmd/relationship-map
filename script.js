@@ -79,20 +79,24 @@ function mountVisualization(data) {
     return typeof maxWidthOrFn === "function" ? maxWidthOrFn(d) : maxWidthOrFn;
   }
 
-  function applyTruncatedText(textSelection, getFullText, maxWidthOrFn) {
+  function applyTruncatedText(textSelection, getFullText, maxWidthOrFn, omitTitle = false) {
     textSelection.each(function(d) {
       const textEl = d3.select(this);
       const fullText = (getFullText(d) || "").toString();
       const maxWidth = resolveMaxWidth(maxWidthOrFn, d);
 
       textEl.text(fullText);
-      textEl.attr("title", fullText);
-
-      let titleEl = textEl.select("title");
-      if (titleEl.empty()) {
-        titleEl = textEl.append("title");
+      if (!omitTitle) {
+        textEl.attr("title", fullText);
+        let titleEl = textEl.select("title");
+        if (titleEl.empty()) {
+          titleEl = textEl.append("title");
+        }
+        titleEl.text(fullText);
+      } else {
+        textEl.attr("title", null);
+        textEl.selectAll("title").remove();
       }
-      titleEl.text(fullText);
 
       if (this.getComputedTextLength() <= maxWidth) {
         return;
@@ -133,18 +137,23 @@ function mountVisualization(data) {
     });
   }
 
-  function applyTwoLineClampedText(textSelection, getFullText, maxWidthOrFn) {
+  function applyTwoLineClampedText(textSelection, getFullText, maxWidthOrFn, omitTitle = false) {
     textSelection.each(function(d) {
       const textEl = d3.select(this);
       const fullText = (getFullText(d) || "").toString().trim();
       const maxWidth = resolveMaxWidth(maxWidthOrFn, d);
 
-      textEl.attr("title", fullText);
-      let titleEl = textEl.select("title");
-      if (titleEl.empty()) {
-        titleEl = textEl.append("title");
+      if (!omitTitle) {
+        textEl.attr("title", fullText);
+        let titleEl = textEl.select("title");
+        if (titleEl.empty()) {
+          titleEl = textEl.append("title");
+        }
+        titleEl.text(fullText);
+      } else {
+        textEl.attr("title", null);
+        textEl.selectAll("title").remove();
       }
-      titleEl.text(fullText);
 
       textEl.selectAll("tspan").remove();
       if (!fullText) return;
@@ -674,9 +683,8 @@ function mountVisualization(data) {
       updateLinkVisibility();
     });
   const nodeInner = nodes.append("g").attr("class", "node-inner");
-  setGroupTitle(nodes, d => `${d.name}\n${getNodeSubText(d)}`.trim());
 
-  // Rectangles
+  // Rectangles (painted under label hit-target so text stays on top)
   const nodeRects = nodeInner.append("rect")
     .attr("class", "node-box")
     .attr("width", NODE_WIDTH)
@@ -690,8 +698,11 @@ function mountVisualization(data) {
       return "#ccffff";
     });
 
+  const nodeLabelHit = nodeInner.append("g").attr("class", "node-label-hit");
+  setGroupTitle(nodeLabelHit, d => `${d.name}\n${getNodeSubText(d)}`.trim());
+
   // Text line 1 (bold name)
-  const nameText = nodeInner.append("text")
+  const nameText = nodeLabelHit.append("text")
     .attr("class", "node-name")
     .attr("text-anchor", "middle")
     .attr("y", 0)
@@ -700,11 +711,12 @@ function mountVisualization(data) {
   applyTruncatedText(
     nameText,
     d => d.name,
-    d => (d.id === PRIMARY_NODE_ID ? NODE_TEXT_MAX_WIDTH_PRIMARY : NODE_TEXT_MAX_WIDTH)
+    d => (d.id === PRIMARY_NODE_ID ? NODE_TEXT_MAX_WIDTH_PRIMARY : NODE_TEXT_MAX_WIDTH),
+    true
   );
 
   // Text line 2
-  const subText = nodeInner.append("text")
+  const subText = nodeLabelHit.append("text")
     .attr("class", "node-subtext")
     .attr("text-anchor", "middle")
     .attr("y", 0)
@@ -712,7 +724,8 @@ function mountVisualization(data) {
   applyTwoLineClampedText(
     subText,
     getNodeSubText,
-    d => (d.id === PRIMARY_NODE_ID ? NODE_TEXT_MAX_WIDTH_PRIMARY : NODE_TEXT_MAX_WIDTH)
+    d => (d.id === PRIMARY_NODE_ID ? NODE_TEXT_MAX_WIDTH_PRIMARY : NODE_TEXT_MAX_WIDTH),
+    true
   );
 
   function layoutNodeContent() {
