@@ -52,14 +52,19 @@
 
 <div id="layout-panel" class="layout-panel" aria-label="Control panel">
   <div class="layout-panel-header">
-    <div class="layout-panel-title">Control panel</div>
+    <div class="layout-panel-title">Advanced Controls</div>
     <button type="button" id="layout-redraw" class="layout-redraw-btn" title="Re-read sliders, apply forces, and run a fresh layout (no page reload)">Redraw</button>
   </div>
-  <div class="layout-row">
-    <label for="data-source">Data source</label>
+  <div class="layout-row"  title="Change the JSON file being used as the data source for the relationship map"
+  >
+    <label
+      for="data-source"
+    >Data source</label>
     <span class="layout-val" aria-hidden="true"></span>
     <div class="layout-slider-row">
-      <select id="data-source" title="JSON dataset for the graph">
+      <select
+        id="data-source"
+      >
         <option value="1" selected>1</option>
         <option value="2">2</option>
         <option value="3">3</option>

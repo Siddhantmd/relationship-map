@@ -762,6 +762,15 @@ function mountVisualization(data) {
 
   layoutNodeContent();
 
+  function syncZoomSliderFromView() {
+    if (!zoomSlider) return;
+    const k = d3.zoomTransform(svg.node()).k;
+    const min = +zoomSlider.min;
+    const max = +zoomSlider.max;
+    const clamped = Math.min(max, Math.max(min, k));
+    zoomSlider.value = String(Math.round(clamped * 10) / 10);
+  }
+
   // -------------------- ZOOM --------------------
   const zoom = d3.zoom()
     .scaleExtent([0.1, 3])
@@ -775,6 +784,7 @@ function mountVisualization(data) {
     .on("zoom", (event) => {
       preservedZoomTransform = event.transform;
       graph.attr("transform", event.transform);
+      syncZoomSliderFromView();
     })
     .on("end", (event) => {
       if (event.sourceEvent?.type === "mousedown") {
@@ -787,6 +797,7 @@ function mountVisualization(data) {
   if (isRemount) {
     svg.call(zoom.transform, preservedZoomTransform);
   }
+  syncZoomSliderFromView();
 
   function centerPrimaryNode(scale = null, animate = false) {
     const primaryNode = data.nodes.find(n => n.id === "p0");
