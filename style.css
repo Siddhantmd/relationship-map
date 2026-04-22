@@ -36,8 +36,19 @@ svg {
   overflow: visible;
 }
 
+.node .node-inner {
+  transform-box: fill-box;
+  transform-origin: center center;
+  transition: transform 600ms linear;
+  transform: scale(1);
+}
+
+.node.node--focus .node-inner {
+  transform: scale(1.05);
+}
+
 .node .node-box {
-  transition: filter 360ms ease, stroke 360ms ease, stroke-width 360ms ease;
+  transition: filter 360ms ease;
   filter: none;
   stroke: transparent;
   stroke-width: 0;
@@ -46,8 +57,6 @@ svg {
 
 .node.node--focus .node-box {
   filter: url(#node-focus-shadow);
-  stroke: rgba(0, 0, 0, 0.1);
-  stroke-width: 0.75px;
 }
 
 /* Primary: extra padding is set in JS; shadow stays fixed (overrides focus filter when both apply). */

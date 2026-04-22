@@ -673,10 +673,11 @@ function mountVisualization(data) {
       currentHovered = null;
       updateLinkVisibility();
     });
+  const nodeInner = nodes.append("g").attr("class", "node-inner");
   setGroupTitle(nodes, d => `${d.name}\n${getNodeSubText(d)}`.trim());
 
   // Rectangles
-  const nodeRects = nodes.append("rect")
+  const nodeRects = nodeInner.append("rect")
     .attr("class", "node-box")
     .attr("width", NODE_WIDTH)
     .attr("height", NODE_MIN_HEIGHT)
@@ -690,7 +691,7 @@ function mountVisualization(data) {
     });
 
   // Text line 1 (bold name)
-  const nameText = nodes.append("text")
+  const nameText = nodeInner.append("text")
     .attr("class", "node-name")
     .attr("text-anchor", "middle")
     .attr("y", 0)
@@ -703,7 +704,7 @@ function mountVisualization(data) {
   );
 
   // Text line 2
-  const subText = nodes.append("text")
+  const subText = nodeInner.append("text")
     .attr("class", "node-subtext")
     .attr("text-anchor", "middle")
     .attr("y", 0)
@@ -716,7 +717,7 @@ function mountVisualization(data) {
 
   function layoutNodeContent() {
     nodes.each(function(d) {
-      const nodeGroup = d3.select(this);
+      const nodeGroup = d3.select(this).select(".node-inner");
       const box = nodeGroup.select("rect.node-box");
       const name = nodeGroup.select("text.node-name");
       const details = nodeGroup.select("text.node-subtext");
