@@ -31,82 +31,82 @@
     <button type="button" id="layout-redraw" class="layout-redraw-btn" title="Re-read sliders, apply forces, and run a fresh layout (no page reload)">Redraw</button>
   </div>
   <div class="layout-row">
-    <label for="layout-link-base">Link length base</label>
+    <label for="layout-link-base" title="Target link length for the farthest hop from the primary node; shorter hops use proportionally shorter targets. Higher spreads nodes apart; lower tightens the graph.">Link length base</label>
     <span class="layout-val" id="layout-link-base-val"></span>
     <div class="layout-slider-row">
-      <input type="range" id="layout-link-base" data-layout-key="linkLengthBasePx" min="50" max="1200" step="10" value="400">
+      <input type="range" id="layout-link-base" data-layout-key="linkLengthBasePx" min="50" max="1200" step="10" value="400" title="Target link length for the farthest hop from the primary node; shorter hops use proportionally shorter targets. Higher spreads nodes apart; lower tightens the graph.">
       <button type="button" class="layout-param-reset" data-layout-key="linkLengthBasePx" title="Reset link length base to default" aria-label="Reset link length base">↺</button>
     </div>
   </div>
   <div class="layout-row">
-    <label for="layout-link-strength">Link strength</label>
+    <label for="layout-link-strength" title="How strongly links pull endpoints toward their ideal length. Higher keeps lengths closer to the target; lower allows more stretch and flexibility.">Link strength</label>
     <span class="layout-val" id="layout-link-strength-val"></span>
     <div class="layout-slider-row">
-      <input type="range" id="layout-link-strength" data-layout-key="linkStrength" min="0" max="2" step="0.05" value="1">
+      <input type="range" id="layout-link-strength" data-layout-key="linkStrength" min="0" max="2" step="0.05" value="1" title="How strongly links pull endpoints toward their ideal length. Higher keeps lengths closer to the target; lower allows more stretch and flexibility.">
       <button type="button" class="layout-param-reset" data-layout-key="linkStrength" title="Reset link strength to default" aria-label="Reset link strength">↺</button>
     </div>
   </div>
   <div class="layout-row">
-    <label for="layout-charge">Charge (repulsion)</label>
+    <label for="layout-charge" title="Global repulsion between nodes (many-body force). More negative pushes nodes apart; closer to zero reduces spreading and can let groups sit nearer together.">Charge (repulsion)</label>
     <span class="layout-val" id="layout-charge-val"></span>
     <div class="layout-slider-row">
-      <input type="range" id="layout-charge" data-layout-key="chargeStrength" min="-1500" max="0" step="5" value="-400">
+      <input type="range" id="layout-charge" data-layout-key="chargeStrength" min="-1500" max="0" step="5" value="-400" title="Global repulsion between nodes (many-body force). More negative pushes nodes apart; closer to zero reduces spreading and can let groups sit nearer together.">
       <button type="button" class="layout-param-reset" data-layout-key="chargeStrength" title="Reset charge to default" aria-label="Reset charge">↺</button>
     </div>
   </div>
   <div class="layout-row">
-    <label for="layout-radial-strength">Radial strength</label>
+    <label for="layout-radial-strength" title="How strongly nodes are pulled onto rings whose radius grows with hop distance from the primary. Higher enforces clearer hop rings; zero turns this force off.">Radial strength</label>
     <span class="layout-val" id="layout-radial-strength-val"></span>
     <div class="layout-slider-row">
-      <input type="range" id="layout-radial-strength" data-layout-key="radialStrength" min="0" max="10" step="0.05" value="5">
+      <input type="range" id="layout-radial-strength" data-layout-key="radialStrength" min="0" max="10" step="0.05" value="5" title="How strongly nodes are pulled onto rings whose radius grows with hop distance from the primary. Higher enforces clearer hop rings; zero turns this force off.">
       <button type="button" class="layout-param-reset" data-layout-key="radialStrength" title="Reset radial strength to default" aria-label="Reset radial strength">↺</button>
     </div>
   </div>
   <div class="layout-row">
-    <label for="layout-radial-spacing">Radial ring spacing</label>
+    <label for="layout-radial-spacing" title="Pixels between hop rings around the primary (each hop gets radius spacing × hop). Larger pushes distant hops outward; smaller compresses rings.">Radial ring spacing</label>
     <span class="layout-val" id="layout-radial-spacing-val"></span>
     <div class="layout-slider-row">
-      <input type="range" id="layout-radial-spacing" data-layout-key="radialRingSpacing" min="50" max="1000" step="10" value="400">
+      <input type="range" id="layout-radial-spacing" data-layout-key="radialRingSpacing" min="50" max="1000" step="10" value="400" title="Pixels between hop rings around the primary (each hop gets radius spacing × hop). Larger pushes distant hops outward; smaller compresses rings.">
       <button type="button" class="layout-param-reset" data-layout-key="radialRingSpacing" title="Reset radial ring spacing to default" aria-label="Reset radial ring spacing">↺</button>
     </div>
   </div>
   <div class="layout-row">
-    <label for="layout-center">Center strength</label>
+    <label for="layout-center" title="Weak pull of the whole graph toward the center of the view. Higher drags everything inward; lower leaves placement mostly to links, charge, and radial forces.">Center strength</label>
     <span class="layout-val" id="layout-center-val"></span>
     <div class="layout-slider-row">
-      <input type="range" id="layout-center" data-layout-key="centerStrength" min="0" max="0.2" step="0.001" value="0.002">
+      <input type="range" id="layout-center" data-layout-key="centerStrength" min="0" max="0.2" step="0.001" value="0.002" title="Weak pull of the whole graph toward the center of the view. Higher drags everything inward; lower leaves placement mostly to links, charge, and radial forces.">
       <button type="button" class="layout-param-reset" data-layout-key="centerStrength" title="Reset center strength to default" aria-label="Reset center strength">↺</button>
     </div>
   </div>
   <div class="layout-row">
-    <label for="layout-collision-radius">Collision radius factor</label>
+    <label for="layout-collision-radius" title="Multiplies the padded node footprint used by collision detection. Higher increases minimum gap between node boxes; lower lets nodes pack closer (may overlap visually if too low).">Collision radius factor</label>
     <span class="layout-val" id="layout-collision-radius-val"></span>
     <div class="layout-slider-row">
-      <input type="range" id="layout-collision-radius" data-layout-key="collisionRadiusFactor" min="0.2" max="2" step="0.02" value="0.72">
+      <input type="range" id="layout-collision-radius" data-layout-key="collisionRadiusFactor" min="0.2" max="2" step="0.02" value="0.72" title="Multiplies the padded node footprint used by collision detection. Higher increases minimum gap between node boxes; lower lets nodes pack closer (may overlap visually if too low).">
       <button type="button" class="layout-param-reset" data-layout-key="collisionRadiusFactor" title="Reset collision radius factor to default" aria-label="Reset collision radius factor">↺</button>
     </div>
   </div>
   <div class="layout-row">
-    <label for="layout-collision-iter">Collision iterations</label>
+    <label for="layout-collision-iter" title="How many collision-resolution passes run per simulation tick. More iterations separate overlaps better; very high values use more CPU each frame.">Collision iterations</label>
     <span class="layout-val" id="layout-collision-iter-val"></span>
     <div class="layout-slider-row">
-      <input type="range" id="layout-collision-iter" data-layout-key="collisionIterations" min="1" max="20" step="1" value="1">
+      <input type="range" id="layout-collision-iter" data-layout-key="collisionIterations" min="1" max="20" step="1" value="1" title="How many collision-resolution passes run per simulation tick. More iterations separate overlaps better; very high values use more CPU each frame.">
       <button type="button" class="layout-param-reset" data-layout-key="collisionIterations" title="Reset collision iterations to default" aria-label="Reset collision iterations">↺</button>
     </div>
   </div>
   <div class="layout-row">
-    <label for="layout-velocity-decay">Velocity decay</label>
+    <label for="layout-velocity-decay" title="Damping on node velocity each tick (simulation friction). Higher calms motion quickly; lower keeps nodes moving longer for a more fluid settle.">Velocity decay</label>
     <span class="layout-val" id="layout-velocity-decay-val"></span>
     <div class="layout-slider-row">
-      <input type="range" id="layout-velocity-decay" data-layout-key="velocityDecay" min="0.05" max="0.99" step="0.01" value="0.8">
+      <input type="range" id="layout-velocity-decay" data-layout-key="velocityDecay" min="0.05" max="0.99" step="0.01" value="0.8" title="Damping on node velocity each tick (simulation friction). Higher calms motion quickly; lower keeps nodes moving longer for a more fluid settle.">
       <button type="button" class="layout-param-reset" data-layout-key="velocityDecay" title="Reset velocity decay to default" aria-label="Reset velocity decay">↺</button>
     </div>
   </div>
   <div class="layout-row">
-    <label for="layout-alpha-decay">Alpha decay</label>
+    <label for="layout-alpha-decay" title="How fast simulation energy (alpha) drops toward rest. Lower runs the layout longer for more refinement; higher stops sooner for a quicker but rougher finish.">Alpha decay</label>
     <span class="layout-val" id="layout-alpha-decay-val"></span>
     <div class="layout-slider-row">
-      <input type="range" id="layout-alpha-decay" data-layout-key="alphaDecay" min="0.0005" max="0.15" step="0.0005" value="0.03">
+      <input type="range" id="layout-alpha-decay" data-layout-key="alphaDecay" min="0.0005" max="0.15" step="0.0005" value="0.03" title="How fast simulation energy (alpha) drops toward rest. Lower runs the layout longer for more refinement; higher stops sooner for a quicker but rougher finish.">
       <button type="button" class="layout-param-reset" data-layout-key="alphaDecay" title="Reset alpha decay to default" aria-label="Reset alpha decay">↺</button>
     </div>
   </div>
