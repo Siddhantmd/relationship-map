@@ -799,6 +799,35 @@ function mountVisualization(data) {
   }
   syncZoomSliderFromView();
 
+  let wheelCursorResetTimer = null;
+  signal.addEventListener("abort", () => {
+    if (wheelCursorResetTimer) {
+      clearTimeout(wheelCursorResetTimer);
+      wheelCursorResetTimer = null;
+    }
+  });
+
+  const svgNode = svg.node();
+  if (svgNode) {
+    svgNode.addEventListener(
+      "wheel",
+      event => {
+        if (!zoom.filter().call(svgNode, event)) return;
+        const dy = event.deltaY;
+        if (dy === 0) return;
+        // Same sense as d3-zoom defaultWheelDelta (-deltaY): scroll up → zoom in.
+        if (dy < 0) svg.style("cursor", "zoom-in");
+        else svg.style("cursor", "zoom-out");
+        if (wheelCursorResetTimer) clearTimeout(wheelCursorResetTimer);
+        wheelCursorResetTimer = setTimeout(() => {
+          wheelCursorResetTimer = null;
+          updateCanvasCursor();
+        }, 200);
+      },
+      { signal, passive: true, capture: true }
+    );
+  }
+
   function centerPrimaryNode(scale = null, animate = false) {
     const primaryNode = data.nodes.find(n => n.id === "p0");
     if (!primaryNode || !Number.isFinite(primaryNode.x) || !Number.isFinite(primaryNode.y)) {
